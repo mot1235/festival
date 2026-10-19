@@ -1,42 +1,28 @@
 import { Pool } from "pg";
 
-declare global {
-  var pgPool: Pool | undefined;
-}
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? {
+          rejectUnauthorized: false,
+        }
+      : false,
+  max: 10, // 最大接続数
+  idleTimeoutMillis: 30000, // アイドルタイムアウト
+  connectionTimeoutMillis: 2000, // 接続タイムアウト
+});
 
-// 接続設定の調整
-export const pool =
-  globalThis.pgPool ||
-  new Pool({
-    connectionString: process.env.DATABASE_URL,
-    // SSL設定: 環境変数やクラウドサービスに応じて柔軟に適用
-    ssl:
-      process.env.NODE_ENV === "production" || process.env.DATABASE_URL?.includes("sslmode=require")
-        ? { rejectUnauthorized: false }
-        : false,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000, // ★ 2秒から10秒へ延長
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.pgPool = pool;
-}
-
-let isInitialized = false;
-
+// データベースの初期化関数
 export async function initializeDatabase() {
-  if (isInitialized) return;
-
   let retries = 3;
 
   while (retries > 0) {
-    let client;
     try {
-      // 接続を取得
-      client = await pool.connect();
+      const client = await pool.connect();
 
       try {
+        // テーブルが存在しない場合は作成
         await client.query(`
           CREATE TABLE IF NOT EXISTS orders (
             id SERIAL PRIMARY KEY,
@@ -48,11 +34,13 @@ export async function initializeDatabase() {
           )
         `);
 
+        // 既存のテーブルにdeleted_atカラムを追加（存在しない場合）
         await client.query(`
           ALTER TABLE orders 
           ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL
         `);
 
+        // 注文番号のシーケンスを管理するテーブル
         await client.query(`
           CREATE TABLE IF NOT EXISTS order_sequence (
             id INTEGER PRIMARY KEY DEFAULT 1,
@@ -60,17 +48,22 @@ export async function initializeDatabase() {
           )
         `);
 
-        await client.query(`
-          INSERT INTO order_sequence (id, current_number)
-          VALUES (1, 0)
-          ON CONFLICT (id) DO NOTHING;
-        `);
+        // 初期データがない場合は挿入
+        const sequenceResult = await client.query(
+          "SELECT COUNT(*) as count FROM order_sequence"
+        );
+        const sequenceCount = parseInt(sequenceResult.rows[0].count);
 
-        isInitialized = true;
+        if (sequenceCount === 0) {
+          await client.query(
+            "INSERT INTO order_sequence (id, current_number) VALUES (1, 0)"
+          );
+        }
+
         console.log("✅ Database initialized successfully");
         return;
       } finally {
-        if (client) client.release(); // 確実に接続をプールに戻す
+        client.release();
       }
     } catch (error) {
       retries--;
@@ -83,10 +76,11 @@ export async function initializeDatabase() {
         throw error;
       }
 
-      // リトライ前に2秒待機
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // 1秒待ってリトライ
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
 }
 
+export { pool };
 export default pool;
