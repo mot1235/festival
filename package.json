@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "predev": "node scripts/generate-build-info.js",
+    "prebuild": "node scripts/generate-build-info.js",
     "build": "npm run generate-build-info && next build",
     "start": "next start",
     "lint": "next lint",
