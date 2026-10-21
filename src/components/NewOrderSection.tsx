@@ -26,7 +26,7 @@ interface NewOrderSectionProps {
 const PRODUCTS = [
   {
     name: "チュロス",
-    price: 350,
+    price: 300,
     hasFlavors: true,
     flavors: ["さとう", "シナモン", "ココアパウダー"],
   },

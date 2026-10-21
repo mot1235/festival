@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
           productName: "チュロス",
           flavor: churros1Flavor,
           quantity: churros1,
-          price: 350,
+          price: 300,
         });
       }
       if (churros2 > 0) {

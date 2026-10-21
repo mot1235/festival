@@ -62,7 +62,7 @@ export default function HistoryPage() {
   const [selectedDate, setSelectedDate] = useState<string>("all");
   const [chartType, setChartType] = useState<string>("bar");
 
-  // 注文データから選択可能な日付を自動生成
+  // 注文データから選択可能な日付を動的に自動生成
   const availableDates = useMemo(() => {
     const datesSet = new Set<string>();
 
@@ -221,10 +221,14 @@ export default function HistoryPage() {
   const getTotalQuantity = () =>
     activeOrders.reduce((sum, order) => sum + order.quantity, 0);
 
+  // 総売上金額（数値型に変換して正確に積算）
   const getTotalSales = () =>
-    activeOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+    activeOrders.reduce((sum, order) => {
+      const price = Number(order.totalPrice || 0);
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0);
 
-  // ★ チュロスとソトックソトックを完全に分別する厳集計ロジック
+  // 販売時点の単価 (item.price) に基づく商品別集計
   const itemizedSummary = useMemo(() => {
     let churrosQuantity = 0;
     let churrosSales = 0;
@@ -240,28 +244,26 @@ export default function HistoryPage() {
           const qty = Number(item.quantity || 0);
           const flavor = String(item.flavor || "通常");
 
-          // 1. ソトックソトックの判定（優先的にチェック）
           const isSotock =
             rawName.includes("ソトック") ||
             rawName.includes("sotock") ||
             rawName.includes("ソトク");
 
-          // 2. チュロスの判定
           const isChurros =
             rawName.includes("チュロス") ||
             rawName.includes("churros");
 
+          // 販売時点の単価を使用
+          const actualPrice = Number(item.price || (isSotock ? 400 : 350));
+
           if (isSotock) {
-            const price = Number(item.price || 400);
             sotockQuantity += qty;
-            sotockSales += qty * price;
+            sotockSales += qty * actualPrice;
           } else if (isChurros) {
-            const price = Number(item.price || 350);
             churrosQuantity += qty;
-            churrosSales += qty * price;
+            churrosSales += qty * actualPrice;
             churrosFlavors[flavor] = (churrosFlavors[flavor] || 0) + qty;
           }
-          // 明細名が一致しない不明なデータはチュロスへ合算せず無視（0本カウント）
         });
       }
     });
@@ -598,7 +600,7 @@ export default function HistoryPage() {
             </div>
           </div>
 
-          {/* 商品別専用集計（チュロス / ソトックソトック） */}
+          {/* 商品別専用集計 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <Card className="border-l-4 border-amber-500 bg-amber-50/30">
               <CardHeader className="pb-2">
@@ -607,9 +609,6 @@ export default function HistoryPage() {
                     <Package className="w-5 h-5 text-amber-600" />
                     チュロス 集計
                   </CardTitle>
-                  <span className="text-sm font-semibold text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
-                    単価: ¥350
-                  </span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -657,9 +656,6 @@ export default function HistoryPage() {
                     <Package className="w-5 h-5 text-orange-600" />
                     ソトックソトック 集計
                   </CardTitle>
-                  <span className="text-sm font-semibold text-orange-700 bg-orange-100 px-3 py-1 rounded-full">
-                    単価: ¥400
-                  </span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -847,7 +843,7 @@ export default function HistoryPage() {
                         <TableCell className="text-right font-bold text-gray-900">
                           {order.deletedAt
                             ? "¥0"
-                            : `¥${(order.totalPrice || 0).toLocaleString()}`}
+                            : `¥${Number(order.totalPrice || 0).toLocaleString()}`}
                         </TableCell>
 
                         <TableCell>
