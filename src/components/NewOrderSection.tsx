@@ -25,6 +25,7 @@ export default function NewOrderSection({
   const handleCreateOrder = () => {
     onCreateOrderAction(quantity);
   };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center gap-2 mb-6">
@@ -67,8 +68,8 @@ export default function NewOrderSection({
 
         <Button
           onClick={handleCreateOrder}
-          disabled/*={isLoading}*/
-          className="w-full bg-black py-3 px-4 rounded-lg font-medium disabled:cursor-not-allowed transition-colors"
+          disabled={isLoading}
+          className="w-full bg-black hover:bg-gray-800 text-white py-3 px-4 rounded-lg font-medium disabled:cursor-not-allowed transition-colors"
         >
           {isLoading ? "注文中..." : "注文する"}
         </Button>
