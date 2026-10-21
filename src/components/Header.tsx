@@ -23,7 +23,7 @@ export default function Header() {
       </div>
       {/* Mobile buttons */}
       <div className="mt-2 md:hidden space-y-2">
-        <Button asChild variant="outline" className="w-full">
+        <Button asChild variant="outline" className="w-full" >
           <Link href="/history">
             <Calendar className="w-4 h-4 mr-2" />
             注文履歴

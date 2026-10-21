@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-import NewOrderSection from "@/components/NewOrderSection";
+import NewOrderSection, { OrderCartItem } from "@/components/NewOrderSection";
 import CookingSection from "@/components/CookingSection";
 import CalloutSection from "@/components/CalloutSection";
 import { Order } from "@/types/order";
@@ -26,9 +26,9 @@ export default function Home() {
     }
   };
 
-  // 新しい注文を作成
-  const createOrder = async (quantity: number) => {
-    if (quantity < 1 || quantity > 5) return;
+  // ★ 新しい注文を作成 (カート形式の配列 items を受け取るように修正)
+  const createOrder = async (cartItems: OrderCartItem[]) => {
+    if (!cartItems || cartItems.length === 0) return;
 
     setIsLoading(true);
     try {
@@ -37,20 +37,24 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ quantity }),
+        body: JSON.stringify({ items: cartItems }),
       });
 
       if (response.ok) {
         const newOrder = await response.json();
         fetchOrders();
 
+        const totalQty = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
         // Toast通知で注文完了を表示
         toast.success("注文が完了しました！", {
-          description: `番号: ${newOrder.orderNumber
+          description: `番号: #${newOrder.orderNumber
             .toString()
-            .padStart(3, "0")} (${quantity}杯)`,
+            .padStart(3, "0")} (計 ${totalQty}本)`,
           duration: 5000,
         });
+      } else {
+        throw new Error("Order creation failed");
       }
     } catch (error) {
       console.error("Failed to create order:", error);
@@ -80,7 +84,6 @@ export default function Home() {
       if (response.ok) {
         fetchOrders();
 
-        // ステータス変更の通知
         if (status === "ready") {
           toast.success("調理完了しました！", {
             description: "お客様をお呼びしてください",
@@ -122,7 +125,7 @@ export default function Home() {
       if (response.ok) {
         fetchOrders();
         toast.success("注文個数を更新しました", {
-          description: `新しい個数: ${quantity}杯`,
+          description: `新しい個数: ${quantity}本`,
         });
       } else {
         throw new Error("Quantity update failed");
@@ -148,7 +151,7 @@ export default function Home() {
       if (response.ok) {
         fetchOrders();
         toast.success("注文を取り消しました", {
-          description: `番号: ${orderNumber.toString().padStart(3, "0")}`,
+          description: `番号: #${orderNumber.toString().padStart(3, "0")}`,
           duration: 3000,
         });
       } else {
@@ -164,10 +167,10 @@ export default function Home() {
     }
   };
 
-  // 自動更新
+  // 自動更新 (5秒間隔)
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 5000); // 5秒ごとに更新
+    const interval = setInterval(fetchOrders, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -180,7 +183,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <NewOrderSection
               isLoading={isLoading}
-              onCreateOrderAction={(quantity: number) => createOrder(quantity)}
+              onCreateOrderAction={createOrder}
             />
             <CookingSection
               orders={orders}
@@ -198,7 +201,6 @@ export default function Home() {
             />
           </div>
         </div>
-        {/* メインコンテンツエリア終了 */}
       </div>
 
       <Footer />

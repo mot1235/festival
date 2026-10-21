@@ -261,7 +261,7 @@ export default function CookingSection({
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">個数</TableCell>
-                  <TableCell>{viewingOrder?.quantity}杯</TableCell>
+                  <TableCell>{viewingOrder?.quantity}本</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">ステータス</TableCell>

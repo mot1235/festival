@@ -39,7 +39,41 @@ export async function initializeDatabase() {
           ALTER TABLE orders 
           ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL
         `);
+        // orders テーブルに total_price カラムを追加（存在しない場合）
+        await client.query(`
+          ALTER TABLE orders 
+          ADD COLUMN IF NOT EXISTS total_price INTEGER NOT NULL DEFAULT 0
+        `);
 
+        // 2. 子テーブル (order_items) の作成（商品ごとの集計用）
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS order_items (
+            id SERIAL PRIMARY KEY,
+            order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+            product_name VARCHAR(100) NOT NULL,
+            quantity INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // 集計・検索用インデックスの作成
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+          CREATE INDEX IF NOT EXISTS idx_order_items_product_name ON order_items(product_name);
+        `);
+        
+        
+        // order_items テーブルに price カラムを追加（存在しない場合）
+        await client.query(`
+          ALTER TABLE order_items 
+          ADD COLUMN IF NOT EXISTS price INTEGER NOT NULL DEFAULT 0
+        `);
+
+        // order_items テーブルに flavor カラムを追加（存在しない場合）
+        await client.query(`
+          ALTER TABLE order_items 
+          ADD COLUMN IF NOT EXISTS flavor VARCHAR(50) DEFAULT 'シナモン'
+        `);
         // 注文番号のシーケンスを管理するテーブル
         await client.query(`
           CREATE TABLE IF NOT EXISTS order_sequence (
