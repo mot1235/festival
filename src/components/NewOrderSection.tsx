@@ -28,7 +28,7 @@ const PRODUCTS = [
     name: "チュロス",
     price: 350,
     hasFlavors: true,
-    flavors: ["シナモン", "シュガー", "チョコレート", "キャラメル"],
+    flavors: ["さとう", "シナモン", "ココアパウダー"],
   },
   {
     name: "ソトックソトック",

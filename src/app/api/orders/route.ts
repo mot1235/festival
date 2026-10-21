@@ -16,53 +16,53 @@ interface OrderItemInput {
 export async function GET() {
   try {
     await ensureInitialized();
-    const client = await pool.connect();
 
-    try {
-      const result = await client.query(`
-        SELECT 
-          o.id,
-          o.order_number,
-          o.quantity,
-          o.total_price,
-          o.status,
-          o.created_at,
-          COALESCE(
-            JSON_AGG(
-              JSON_BUILD_OBJECT(
-                'id', oi.id,
-                'productName', oi.product_name,
-                'quantity', oi.quantity,
-                'price', oi.price,
-                'flavor', oi.flavor
-              )
-            ) FILTER (WHERE oi.id IS NOT NULL),
-            '[]'
-          ) AS items
-        FROM orders o
-        LEFT JOIN order_items oi ON o.id = oi.order_id
-        WHERE o.status IN ('pending', 'ready')
-        AND o.deleted_at IS NULL
-        GROUP BY o.id
-        ORDER BY o.created_at ASC
-      `);
+    // pool.query を直接使用（自動解放されるため安全かつ高速）
+    const result = await pool.query(`
+      SELECT 
+        o.id,
+        o.order_number,
+        o.quantity,
+        o.total_price,
+        o.status,
+        o.created_at,
+        COALESCE(
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'id', oi.id,
+              'productName', oi.product_name,
+              'quantity', oi.quantity,
+              'price', oi.price,
+              'flavor', oi.flavor
+            )
+          ) FILTER (WHERE oi.id IS NOT NULL),
+          '[]'
+        ) AS items
+      FROM orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      WHERE o.status IN ('pending', 'ready')
+      AND o.deleted_at IS NULL
+      GROUP BY o.id
+      ORDER BY o.created_at ASC
+    `);
 
-      const formattedOrders = result.rows.map((order: any) => ({
-        id: order.id,
-        orderNumber: order.order_number,
-        quantity: order.quantity,
-        totalPrice: order.total_price,
-        status: order.status,
-        createdAt: order.created_at,
-        items: order.items,
-      }));
+    const formattedOrders = result.rows.map((order: any) => ({
+      id: order.id,
+      orderNumber: order.order_number,
+      quantity: order.quantity,
+      totalPrice: order.total_price,
+      status: order.status,
+      createdAt: order.created_at,
+      items: order.items,
+    }));
 
-      return NextResponse.json(formattedOrders);
-    } finally {
-      client.release();
-    }
+    return NextResponse.json(formattedOrders, {
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
   } catch (error) {
-    console.error("Database error:", error);
+    console.error("Database GET error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -80,15 +80,13 @@ export async function POST(request: NextRequest) {
     let items: OrderItemInput[] = [];
 
     if (Array.isArray(body.items) && body.items.length > 0) {
-      // カート形式のリクエスト
       items = body.items.map((item: any) => ({
-        productName: item.productName,
+        productName: item.productName || item.product_name || "商品",
         flavor: item.flavor || "通常",
         quantity: Number(item.quantity || 0),
         price: Number(item.price || 0),
       }));
     } else {
-      // 従来の固定プロパティ形式のリクエスト（フォールバック）
       const churros1 = Number(body.churros1 || 0);
       const churros1Flavor = body.churros1Flavor || "シナモン";
       const churros2 = Number(body.churros2 || 0);
@@ -130,16 +128,20 @@ export async function POST(request: NextRequest) {
     try {
       await client.query("BEGIN");
 
-      // 2. 注文番号の発行 (order_sequence)
+      // 2. 注文番号の安全なインクリメント＆取得 (1つのSQL文でアトミックに実行)
       const sequenceResult = await client.query(
-        "SELECT current_number FROM order_sequence WHERE id = 1"
+        "UPDATE order_sequence SET current_number = current_number + 1 WHERE id = 1 RETURNING current_number"
       );
-      const newOrderNumber = sequenceResult.rows[0].current_number + 1;
 
-      await client.query(
-        "UPDATE order_sequence SET current_number = $1 WHERE id = 1",
-        [newOrderNumber]
-      );
+      // シーケンスレコードが存在しない場合の安全装置
+      let newOrderNumber = 1;
+      if (sequenceResult.rows.length > 0) {
+        newOrderNumber = sequenceResult.rows[0].current_number;
+      } else {
+        await client.query(
+          "INSERT INTO order_sequence (id, current_number) VALUES (1, 1)"
+        );
+      }
 
       // 3. 親テーブル (orders) に注文情報を挿入
       const insertOrderResult = await client.query(
@@ -180,7 +182,7 @@ export async function POST(request: NextRequest) {
       client.release();
     }
   } catch (error) {
-    console.error("Database error:", error);
+    console.error("Database POST error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -8,14 +8,12 @@ import { Check, Clock, RefreshCw } from "lucide-react";
 // 味（フレーバー）に応じた色バッジを定義
 const getFlavorBadgeStyle = (flavor?: string) => {
   switch (flavor) {
-    case "シナモン":
+    case "さとう":
       return "bg-amber-900/60 text-amber-200 border-amber-700/50";
-    case "シュガー":
+    case "シナモン":
       return "bg-slate-800 text-slate-200 border-slate-600";
-    case "チョコレート":
+    case "ココアパウダー":
       return "bg-yellow-950 text-amber-500 border-amber-900";
-    case "キャラメル":
-      return "bg-orange-950 text-orange-300 border-orange-800";
     default:
       return "bg-gray-800 text-gray-300 border-gray-700";
   }
