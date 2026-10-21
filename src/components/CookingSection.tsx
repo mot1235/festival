@@ -102,7 +102,7 @@ export default function CookingSection({
                   <div className="text-xl font-bold text-gray-900">
                     {order.orderNumber ? `#${order.orderNumber}` : "---"}
                   </div>
-                  <div className="text-gray-600">{order.quantity}杯</div>
+                  <div className="text-gray-600">{order.quantity}個</div>
                   <div className="text-sm text-gray-500">
                     {order.createdAt
                       ? (() => {

@@ -79,7 +79,7 @@ export default function Footer() {
 
         {/* コピーライト */}
         <div className="mt-3 pt-3 border-t border-gray-300 text-center text-xs text-gray-400">
-          <p>&copy; 2025 Sakurai Lab. All rights reserved.</p>
+          <p>&copy; 2026 Sakurai Lab. All rights reserved.</p>
         </div>
       </div>
     </footer>

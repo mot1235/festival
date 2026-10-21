@@ -21,7 +21,7 @@ export function getBuildInfo(): BuildInfo {
       shortCommitHash: "dev",
       branch: "development",
       buildTime: new Date().toISOString(),
-      repository: "Hamaryo226/OderManager2",
+      repository: "mot1235/festival",
     };
   }
 }

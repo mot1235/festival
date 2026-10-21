@@ -25,7 +25,7 @@ interface NewOrderSectionProps {
 
 const PRODUCTS = [
   {
-    name: "チュロス",
+    name: "ミニチュロス(３個入)",
     price: 300,
     hasFlavors: true,
     flavors: ["さとう", "シナモン", "ココアパウダー"],
@@ -168,7 +168,7 @@ export default function NewOrderSection({
           {/* 数量選択 */}
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-              本数
+              個数
             </label>
             <Select
               value={quantity.toString()}
@@ -180,7 +180,7 @@ export default function NewOrderSection({
               <SelectContent>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                   <SelectItem key={num} value={num.toString()}>
-                    {num} 本
+                    {num} 個
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -247,7 +247,7 @@ export default function NewOrderSection({
 
             {/* 小計 */}
             <div className="flex justify-between items-center p-3 bg-gray-100 rounded-lg font-bold text-gray-800 text-base">
-              <span>合計 ({totalQuantity}本)</span>
+              <span>合計 ({totalQuantity}個)</span>
               <span>¥{totalPrice.toLocaleString()}</span>
             </div>
           </div>
